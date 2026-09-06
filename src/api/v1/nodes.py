@@ -1,0 +1,13 @@
+from typing import List
+from fastapi import APIRouter
+from src.models.node import FlowpipeNodeSchema
+from src.flowpipe_nodes.registry import get_registered_node_definitions
+
+router = APIRouter()
+
+@router.get("/", response_model=List[FlowpipeNodeSchema])
+def list_node_definitions():
+    # Return registered node types
+    nodes = get_registered_node_definitions()
+    if not nodes: return []
+    return nodes

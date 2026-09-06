@@ -10,8 +10,7 @@ Visual Execution System Backend Server.
 ## Install UV
 
 ```bash
-# Install uv via pip
-pip install uv
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ## Setup & Install dependencies
