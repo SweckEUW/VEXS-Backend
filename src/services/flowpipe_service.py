@@ -2,22 +2,12 @@ from flowpipe import Graph, INode, InputPlug, Node, OutputPlug
 from time import time
 from src.services.demoGraph import demo_graph
 
-# def evaluate_graph(raw_json: dict | str) -> bool:
-#     # Ensure data is parsed as dict
-#     data = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
-#     if not data: return False
+def evaluate_graph(json: dict | str) -> bool:
+    # Reconstruct flowpipe graph instance
+    graph = Graph()
+    graph.from_json(json)
+    graph.evaluate()
     
-#     # Reconstruct flowpipe graph instance
-#     graph = Graph()
-#     # TODO: Dynamic node loading & wiring based on data dictionary
-    
-#     # Execute graph locally using sequential evaluator
-#     try:
-#         SequentialEvaluator().evaluate(graph)
-#         return True
-#     except Exception as e:
-#         print(f"Execution error: {e}")
-#         return False
 
 def evaluate_test_graph() -> bool:
     @Node(outputs=["time"])

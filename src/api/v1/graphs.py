@@ -9,9 +9,14 @@ router = APIRouter()
 # Execute test graph
 @router.get("/executeTest")
 def execute_test_graph():
-    # Run evaluation via flowpipe service
     success = flowpipe_service.evaluate_test_graph()
-    
+    return {"status": success}
+
+# Get Graph JSON from Shotgrid and execute it on server (TODO: On Deadline farm)
+@router.get("{graph_id}/execute/")
+def execute_graph(graph_id: int):
+    graph = shotgrid_service.get_graph(graph_id) # Get Graph from Shotgrid
+    success = flowpipe_service.evaluate_graph(graph) # Execute Graph on Server
     return {"status": success}
 
 # Fetch all graphs

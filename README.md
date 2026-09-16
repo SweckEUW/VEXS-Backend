@@ -39,7 +39,6 @@ Required variables in `.env`:
 In the project root folder run:
 
 ```bash
-# Start server with auto-reload
 uv run uvicorn src.main:app --reload
 ```
 
@@ -48,12 +47,3 @@ The API is then available at:
 - API: http://127.0.0.1:8000
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
-
-## Development
-
-To add new dependencies to the project, use `uv add` instead of `pip install`:
-
-```bash
-# Add new package
-uv add <package_name>
-```
