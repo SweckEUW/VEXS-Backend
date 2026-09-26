@@ -39,4 +39,9 @@ class AddNode(INode):
         # Sum both inputs safely
         val_a = a if a is not None else 0.0
         val_b = b if b is not None else 0.0
+
+        result = val_a + val_b
+
+        print(result)
+        
         return {"result": val_a + val_b}

@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from src.flowpipe_nodes.registry import discover_nodes
 from src.api.v1 import graphs, nodes
@@ -34,3 +36,8 @@ def health_check():
 # Correct path since main.py is already inside src/
 nodes_path = Path(__file__).parent / "flowpipe_nodes" / "nodes"
 if nodes_path.exists(): app.mount("/static/nodes", StaticFiles(directory=str(nodes_path)), name="nodes")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("Validation error:", exc.errors())
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})

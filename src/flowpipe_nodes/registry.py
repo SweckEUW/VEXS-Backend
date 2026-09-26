@@ -1,11 +1,9 @@
-import inspect
 import importlib
 import pkgutil
-import time
 from pathlib import Path
-from typing import Dict, Type, List
+from typing import Dict, Type
 from flowpipe import INode
-from src.models.node import FlowpipeNodeSchema, PlugDefinition
+from src.models.flowpipe import SerializedFlowpipeNode
 
 NODE_REGISTRY: Dict[str, Type[INode]] = {}
 
@@ -26,51 +24,21 @@ def discover_nodes():
         if is_pkg: continue
         importlib.import_module(f"src.flowpipe_nodes.nodes.{module_name}")
 
-def get_registered_node_definitions() -> List[FlowpipeNodeSchema]:
-    # Debug current registry size
-    print(f"[DEBUG] Registry has {len(NODE_REGISTRY)} nodes registered: {list(NODE_REGISTRY.keys())}")
-
-    definitions: List[FlowpipeNodeSchema] = []
-    base_dir = Path(__file__).resolve().parent.parent.parent
-
-    for idx, (node_type, cls) in enumerate(NODE_REGISTRY.items()):
-        # Generate unique probe name per request
-        unique_probe_name = f"probe_{node_type.replace('.', '_')}_{int(time.time())}_{idx}"
+def get_registered_node_definitions() -> list[SerializedFlowpipeNode]:
+    catalog: list[SerializedFlowpipeNode] = []
+    
+    for node_type, cls in NODE_REGISTRY.items():
+        # Instantiate detached from default graph to prevent memory leaks
+        probe: INode = cls(name=cls.__name__, graph=None)
+        data = probe.to_json()
         
-        try:
-            probe = cls(name=unique_probe_name)
-        except Exception as e:
-            # Print exact error instead of hiding it
-            print(f"[ERROR] Failed to instantiate probe for '{node_type}': {e}")
-            continue
-
-        try:
-            full_path = Path(inspect.getfile(cls)).resolve()
-            rel_path = str(full_path.relative_to(base_dir)).replace("\\", "/")
-        except Exception as e:
-            print(f"[ERROR] Path resolution failed for '{node_type}': {e}")
-            rel_path = str(inspect.getfile(cls)).replace("\\", "/")
-
-        inputs = [
-            PlugDefinition(name=name, default_value=plug.value)
-            for name, plug in probe.inputs.items()
-        ]
-        outputs = [
-            PlugDefinition(name=name)
-            for name in probe.outputs.keys()
-        ]
-
-        definitions.append(
-            FlowpipeNodeSchema(
-                type=node_type,
-                label=getattr(cls, "label", node_type),
-                category=getattr(cls, "category", "General"),
-                cls=cls.__name__,
-                module=cls.__module__,
-                file_location=rel_path,
-                inputs=inputs,
-                outputs=outputs
-            )
-        )
-
-    return definitions
+        # Inject UI keys into metadata
+        data["metadata"].update({
+            "type": node_type,
+            "label": getattr(cls, "label", cls.__name__),
+            "category": getattr(cls, "category", "General"),
+        })
+        
+        catalog.append(SerializedFlowpipeNode.model_validate(data))
+        
+    return catalog
