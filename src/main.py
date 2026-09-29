@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from src.flowpipe_nodes.registry import discover_nodes
-from src.api.v1 import graphs, nodes
+from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes
+from src.flowpipeNodes.registry import discover_nodes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,15 +26,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(graphs.router, prefix="/api/v1/graphs", tags=["Graphs"])
-app.include_router(nodes.router, prefix="/api/v1/nodes", tags=["Nodes"])
+app.include_router(vexsGraphs.router, prefix="/api/v1/vexsgraphs", tags=["VexsGraphs"])
+app.include_router(flowpipeNodes.router, prefix="/api/v1/flowpipenodes", tags=["FlowpipeNodes"])
+app.include_router(vexsHooksConnections.router, prefix="/api/v1/vexshooksconnections", tags=["VexsHooksConnections"])
 
 @app.get("/")
 def health_check():
     return {"status": "VEXS Backend running"}
 
 # Correct path since main.py is already inside src/
-nodes_path = Path(__file__).parent / "flowpipe_nodes" / "nodes"
+nodes_path = Path(__file__).parent / "flowpipeNodes" / "nodes"
 if nodes_path.exists(): app.mount("/static/nodes", StaticFiles(directory=str(nodes_path)), name="nodes")
 
 @app.exception_handler(RequestValidationError)

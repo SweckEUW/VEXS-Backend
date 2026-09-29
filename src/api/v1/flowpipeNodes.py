@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter
 from src.models.flowpipe import SerializedFlowpipeNode
-from src.flowpipe_nodes.registry import get_registered_node_definitions
+from src.flowpipeNodes.registry import get_registered_node_definitions
 
 router = APIRouter()
 

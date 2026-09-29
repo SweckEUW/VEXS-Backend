@@ -15,10 +15,7 @@ class VexsGraphUpdate(BaseModel):
     description: str | None = None
     flowpipe_graph: SerializedFlowpipeGraph | None = None
 
-class VexsGraphResponse(BaseModel):
+class VexsGraphResponse(VexsGraphBase):
     id: int = Field(..., description="ShotGrid entity ID")
-    name: str | None = None
-    description: str | None = None
-    flowpipe_graph: SerializedFlowpipeGraph | None = None
     created_at: datetime = Field(..., description="Timestamp of creation")
     updated_at: datetime = Field(..., description="Timestamp of last update")

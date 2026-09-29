@@ -1,5 +1,5 @@
 from flowpipe import INode, InputPlug, OutputPlug
-from src.flowpipe_nodes.registry import register_node
+from src.flowpipeNodes.registry import register_node
 
 @register_node("nuke.render_node")
 class NukeRenderNode(INode):

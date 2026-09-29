@@ -22,7 +22,7 @@ def discover_nodes():
 
     for _, module_name, is_pkg in pkgutil.iter_modules([str(nodes_dir)]):
         if is_pkg: continue
-        importlib.import_module(f"src.flowpipe_nodes.nodes.{module_name}")
+        importlib.import_module(f"src.flowpipeNodes.nodes.{module_name}")
 
 def get_registered_node_definitions() -> list[SerializedFlowpipeNode]:
     catalog: list[SerializedFlowpipeNode] = []
