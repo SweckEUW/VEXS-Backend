@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     shotgrid_server_path: str = "https://th-owl.shotgrid.autodesk.com/"
     shotgrid_script_name: str = "vexs_api_service"
     shotgrid_graph_entity: str = "CustomEntity01"
+    shotgrid_hook_connection_entity: str = "CustomEntity02"
     shotgrid_script_key: str
 
 settings = Settings()

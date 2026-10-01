@@ -1,22 +1,22 @@
 from typing import cast
 from src.core.config import settings
-from src.services import shotgridService
-from src.services import vexsHookService
+from src.services import shotgridService, vexsGraphService
 from src.models.shotgrid import (ShotGridEntityRef, ShotGridHookConnectionData, ShotGridHookConnectionEntity)
 from src.models.vexsHookConnection import (VexsHookConnectionCreate, VexsHookConnectionResponse, VexsHookConnectionUpdate)
 
-
 HOOK_CONNECTION_ENTITY = settings.shotgrid_hook_connection_entity
 GRAPH_ENTITY = settings.shotgrid_graph_entity
-HOOK_CONNECTION_FIELDS = ["id", "code", "sg_flowpipe_graph_id", "sg_hook_id", "created_at", "updated_at"] 
-
 
 # Map ShotGrid data to API structure
 def _map_to_pydantic(sg_connection: ShotGridHookConnectionEntity) -> VexsHookConnectionResponse:
+
+    vexs_graph_ref = sg_connection["sg_vexs_graph_1"]
+    vexs_graph = vexsGraphService.get_graph(vexs_graph_ref["id"])
+    
     return VexsHookConnectionResponse(
         id=sg_connection["id"],
         hook_id=sg_connection["sg_hook_id"],
-        flowpipe_graph_id=sg_connection["sg_flowpipe_graph_id"],
+        vexs_graph=vexs_graph,
         created_at=sg_connection["created_at"],
         updated_at=sg_connection["updated_at"],
     )
@@ -27,14 +27,14 @@ def _map_to_shotgrid(payload: VexsHookConnectionCreate | VexsHookConnectionUpdat
 
     data: ShotGridHookConnectionData = {
         "code": payload.hook.name,
-        "sg_flowpipe_graph_id": graph_link,
-        "sg_hook_id": "",
+        "sg_vexs_graph_1": graph_link,
+        "sg_hook_id": payload.hook_id,
     }
     return data
 
 # Fetch all hook connections
 def get_all_hook_connections() -> list[VexsHookConnectionResponse]:
-    connections = shotgridService.find(HOOK_CONNECTION_ENTITY, HOOK_CONNECTION_FIELDS)
+    connections = shotgridService.find(HOOK_CONNECTION_ENTITY)
     if not connections:
         return []
 
@@ -43,7 +43,7 @@ def get_all_hook_connections() -> list[VexsHookConnectionResponse]:
 
 # Fetch single hook connection
 def get_hook_connection(connection_id: int) -> VexsHookConnectionResponse | None:
-    connection = shotgridService.find_one(HOOK_CONNECTION_ENTITY, connection_id, HOOK_CONNECTION_FIELDS)
+    connection = shotgridService.find_one(HOOK_CONNECTION_ENTITY, connection_id)
     if not connection:
         return None
 

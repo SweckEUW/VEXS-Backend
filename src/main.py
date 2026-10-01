@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes
+from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes, vexsHooks
 from src.flowpipeNodes.registry import discover_nodes
 
 @asynccontextmanager
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(vexsGraphs.router, prefix="/api/v1/vexsgraphs", tags=["VexsGraphs"])
 app.include_router(flowpipeNodes.router, prefix="/api/v1/flowpipenodes", tags=["FlowpipeNodes"])
 app.include_router(vexsHooksConnections.router, prefix="/api/v1/vexshooksconnections", tags=["VexsHooksConnections"])
+app.include_router(vexsHooks.router, prefix="/api/v1/vexshooks", tags=["VexsHooks"])
 
 @app.get("/")
 def health_check():

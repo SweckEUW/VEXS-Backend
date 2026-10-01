@@ -1,8 +1,9 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
+from src.models.vexsGraph import VexsGraphResponse
 
 class VexsHookConnectionBase(BaseModel):
-    flowpipe_graph_id: int = Field(..., description="ID of the associated flowpipe graph")
+    vexs_graph: VexsGraphResponse = Field(..., description="ID of the associated flowpipe graph")
     hook_id: int = Field(..., description="ID of the associated hook")
 
 class VexsHookConnectionCreate(VexsHookConnectionBase):

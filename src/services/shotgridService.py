@@ -4,7 +4,6 @@ from src.core.config import settings
 from src.models.shotgrid import ShotGridEntityRef, ShotGridFilter, ShotGridRecord
 
 # Init ShotGrid connection
-SHOTGRID_GRAPH_ENTITY = settings.shotgrid_graph_entity
 SHOTGRID_PROJECT_ID = settings.shotgrid_project_id
 SHOTGRID_SERVER_PATH = settings.shotgrid_server_path
 SHOTGRID_SCRIPT_NAME = settings.shotgrid_script_name
@@ -14,33 +13,51 @@ _sg = shotgun_api3.Shotgun(SHOTGRID_SERVER_PATH, SHOTGRID_SCRIPT_NAME, SHOTGRID_
 
 PROJECT_REF: ShotGridEntityRef = {"type": "Project", "id": settings.shotgrid_project_id}
 
+# Cache of all field names per entity type, read from the ShotGrid schema
+_schema_fields_cache: dict[str, list[str]] = {}
+
+# Read all field names of an entity type from the ShotGrid schema (cached)
+def get_schema_fields(entity_type: str) -> list[str]:
+    if entity_type not in _schema_fields_cache:
+        schema = _sg.schema_field_read(entity_type)
+        _schema_fields_cache[entity_type] = list(schema.keys())
+
+    return _schema_fields_cache[entity_type]
+
+# Use the given fields or fall back to all schema fields of the entity type
+def _resolve_fields(entity_type: str, fields: list[str] | None) -> list[str]:
+    if fields is None:
+        return get_schema_fields(entity_type)
+
+    return fields
+
 # Find all entities of a type, optionally filtered
-def find(entity_type: str, fields: list[str], filters: list[ShotGridFilter] | None = None) -> list[ShotGridRecord]:
+def find(entity_type: str, fields: list[str] | None = None, filters: list[ShotGridFilter] | None = None) -> list[ShotGridRecord]:
     if filters is None:
         filters = []
 
-    records = _sg.find(entity_type, filters, fields)
+    records = _sg.find(entity_type, filters, _resolve_fields(entity_type, fields))
     if not records:
         return []
 
     return records
 
 # Find a single entity by its ID
-def find_one(entity_type: str, entity_id: int, fields: list[str]) -> ShotGridRecord | None:
+def find_one(entity_type: str, entity_id: int, fields: list[str] | None = None) -> ShotGridRecord | None:
     filters: list[ShotGridFilter] = [["id", "is", entity_id]]
 
-    record = _sg.find_one(entity_type, filters, fields)
+    record = _sg.find_one(entity_type, filters, _resolve_fields(entity_type, fields))
     if not record:
         return None
 
     return record
 
 # Create a new entity in the configured project
-def create( entity_type: str, data: Mapping[str, Any], return_fields: list[str]) -> ShotGridRecord | None:
+def create( entity_type: str, data: Mapping[str, Any], return_fields: list[str] | None = None) -> ShotGridRecord | None:
     create_data = dict(data)
     create_data["project"] = PROJECT_REF
 
-    record = _sg.create(entity_type, create_data, return_fields)
+    record = _sg.create(entity_type, create_data, _resolve_fields(entity_type, return_fields))
     if not record:
         return None
 

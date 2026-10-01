@@ -36,10 +36,10 @@ class ShotGridGraphData(TypedDict, total=False):
 
 # Hook Connections
 class ShotGridHookConnectionEntity(ShotGridEntityBase):
-    sg_flowpipe_graph_id: int
+    sg_vexs_graph_1: ShotGridEntityRef
     sg_hook_id: int
 
 class ShotGridHookConnectionData(TypedDict, total=False):
     code: str
-    sg_flowpipe_graph_id: ShotGridEntityRef
-    sg_hook_id: ShotGridEntityRef
+    sg_vexs_graph_1: ShotGridEntityRef
+    sg_hook_id: int
