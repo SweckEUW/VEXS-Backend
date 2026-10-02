@@ -1,10 +1,11 @@
 from src.core.config import settings
 from src.services import shotgridService
-from src.models.shotgrid import ShotGridGraphEntity, ShotGridGraphData
+from src.models.shotgrid import ShotGridEntityRef, ShotGridFilter, ShotGridGraphEntity, ShotGridGraphData
 from src.models.vexsGraph import VexsGraphCreate, VexsGraphResponse, VexsGraphUpdate
 from src.models.flowpipe import SerializedFlowpipeGraph
 
 GRAPH_ENTITY = settings.shotgrid_graph_entity
+HOOK_CONNECTION_ENTITY = settings.shotgrid_hook_connection_entity
 GRAPH_FIELDS = ["id", "code", "description", "sg_json_graph", "created_at", "updated_at"]
 
 from typing import cast
@@ -73,10 +74,13 @@ def update_graph(graph_id: int, payload: VexsGraphUpdate) -> VexsGraphResponse |
     shotgridService.update(GRAPH_ENTITY, graph_id, data)
     return get_graph(graph_id)
 
-# Delete graph
+# Delete graph together with all hook connections linked to it
 def delete_graph(graph_id: int) -> bool:
-    success = shotgridService.delete(GRAPH_ENTITY, graph_id)
-    if not success:
-        return False
+    graph_link: ShotGridEntityRef = {"type": GRAPH_ENTITY, "id": graph_id}
+    filters: list[ShotGridFilter] = [["sg_vexs_graph_1", "is", graph_link]]
+    connections = shotgridService.find(HOOK_CONNECTION_ENTITY, fields=["id"], filters=filters)
 
-    return True
+    entities: list[ShotGridEntityRef] = [{"type": HOOK_CONNECTION_ENTITY, "id": connection["id"]} for connection in connections]
+    entities.append(graph_link)
+
+    return shotgridService.batch_delete(entities)

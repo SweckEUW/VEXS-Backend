@@ -7,6 +7,4 @@ router = APIRouter()
 
 @router.get("/", response_model=List[SerializedFlowpipeNode])
 def list_node_definitions():
-    nodes = get_registered_node_definitions()
-    if not nodes: return []
-    return nodes
+    return get_registered_node_definitions() or []

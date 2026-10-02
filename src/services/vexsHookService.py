@@ -3,18 +3,28 @@ from src.models.vexsHook import VexsHook
 HOOKS: list[VexsHook] = [
     VexsHook(
         id=1,
-        name="Asset Publish Notifier",
-        description="Benachrichtigt das Team bei einem Asset-Publish",
+        name="Asset Version Published",
+        description="Fires when an artist publishes a new version of an asset or shot.",
+        icon="upload"
     ),
     VexsHook(
         id=2,
-        name="Shot Publish Sync",
-        description="Synchronisiert Shots nach dem Publish",
+        name="Shot Created",
+        description="Fires when a new shot is created in ShotGrid",
+        icon="forward"
     ),
     VexsHook(
         id=3,
-        name="Task Complete Logger",
+        name="Task Status Changed",
+        description="Fires when the status of a task changes, for example from “In Progress” to “Final",
+        icon="flag"
     ),
+    VexsHook(
+        id=4,
+        name="Playblast Submitted",
+        description="Fires when an artist submits a playblast from Maya or Houdini",
+        icon="video"
+    )
 ]
 
 

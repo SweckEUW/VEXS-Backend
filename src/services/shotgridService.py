@@ -78,3 +78,13 @@ def delete(entity_type: str, entity_id: int) -> bool:
         return False
 
     return True
+
+# Delete several entities in one transaction (all or nothing, ShotGrid moves them to the trash)
+def batch_delete(entities: list[ShotGridEntityRef]) -> bool:
+    requests = [{"request_type": "delete", "entity_type": entity["type"], "entity_id": entity["id"]} for entity in entities]
+
+    results = _sg.batch(requests)
+    if not results:
+        return False
+
+    return all(results)
