@@ -32,12 +32,14 @@ def get_registered_node_definitions() -> list[SerializedFlowpipeNode]:
         probe: INode = cls(name=cls.__name__, graph=None)
         data = probe.to_json()
         
-        # Inject UI keys into metadata
-        data["metadata"].update({
+        # Title on top level, sidebar data under "editor" (see flowpipe-web-editor's EditorNodeMetadata)
+        data["metadata"]["label"] = getattr(cls, "label", cls.__name__)
+        data["metadata"]["editor"] = {
             "type": node_type,
-            "label": getattr(cls, "label", cls.__name__),
-            "category": getattr(cls, "category", "General"),
-        })
+            "category": getattr(cls, "category", None),
+            "description": getattr(cls, "description", None),
+            "icon": getattr(cls, "icon", None),
+        }
         
         catalog.append(SerializedFlowpipeNode.model_validate(data))
         

@@ -1,52 +1,31 @@
 import inspect
 import json
+import logging
 import os
 import subprocess
+import tempfile
+import time
 from typing import Any, Callable
 from flowpipe import INode, InputPlug, OutputPlug
 from src.flowpipeNodes.registry import register_node
 
-# Runs inside Blender, its source is passed to Blender via --python-expr
-def _blender_main(args: dict[str, Any]) -> None:
-    import bpy, math, os
-    from mathutils import Vector
+log = logging.getLogger(__name__)
 
-    asset_file = args["asset_file"]
+# Runs inside Blender, its source is written to a temp script passed via --python
+def _blender_main(args: dict[str, Any]) -> None:
+    import bpy, math  # pyright: ignore[reportMissingModuleSource]
+    from mathutils import Vector  # pyright: ignore[reportMissingModuleSource]
+
     frames = args["frames"]
     scene = bpy.context.scene
 
-    # Start from an empty scene
-    for obj in list(bpy.data.objects):
-        bpy.data.objects.remove(obj, do_unlink=True)
-
-    # Import asset depending on file extension
-    before = set(bpy.data.objects)
-    ext = os.path.splitext(asset_file)[1].lower()
-    if ext == ".fbx":
-        bpy.ops.import_scene.fbx(filepath=asset_file)
-    elif ext == ".obj":
-        bpy.ops.wm.obj_import(filepath=asset_file)
-    elif ext == ".abc":
-        bpy.ops.wm.alembic_import(filepath=asset_file)
-    elif ext in (".usd", ".usda", ".usdc", ".usdz"):
-        bpy.ops.wm.usd_import(filepath=asset_file)
-    elif ext in (".glb", ".gltf"):
-        bpy.ops.import_scene.gltf(filepath=asset_file)
-    elif ext == ".blend":
-        with bpy.data.libraries.load(asset_file, link=False) as (src, dst):
-            dst.objects = src.objects
-        for obj in dst.objects:
-            if obj is not None:
-                scene.collection.objects.link(obj)
-    else:
-        raise RuntimeError(f"Unsupported asset format: {ext}")
-
-    imported = [o for o in bpy.data.objects if o not in before]
-    meshes = [o for o in imported if o.type == "MESH"]
+    # Frame everything that renders, the scene is opened from the input .blend
+    objects = list(scene.objects)
+    meshes = [o for o in objects if o.type == "MESH" and not o.hide_render]
     if not meshes:
-        raise RuntimeError(f"No mesh found in asset: {asset_file}")
+        raise RuntimeError("No renderable mesh found in scene")
 
-    # World space bounding box of all imported meshes
+    # World space bounding box of all meshes
     bpy.context.view_layer.update()
     corners = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
     bb_min = Vector((min(c.x for c in corners), min(c.y for c in corners), min(c.z for c in corners)))
@@ -58,7 +37,7 @@ def _blender_main(args: dict[str, Any]) -> None:
     # Center asset on the origin, standing on the ground
     root = bpy.data.objects.new("asset_root", None)
     scene.collection.objects.link(root)
-    for obj in imported:
+    for obj in objects:
         if obj.parent is None:
             obj.parent = root
     root.location = (-(bb_min.x + bb_max.x) / 2, -(bb_min.y + bb_max.y) / 2, -bb_min.z)
@@ -73,14 +52,15 @@ def _blender_main(args: dict[str, Any]) -> None:
     world = bpy.data.worlds.new("turntable_world")
     world.color = (0.05, 0.05, 0.05)
     world.use_nodes = True
-    background = world.node_tree.nodes.get("Background")
+    background = world.node_tree.nodes.get("Background") if world.node_tree else None
     if background:
         background.inputs["Color"].default_value = (0.05, 0.05, 0.05, 1.0)
     scene.world = world
 
     # Three point light setup, scaled to the asset
-    def add_light(name, energy, location):
+    def add_light(name: str, energy: float, location: tuple[float, float, float]) -> None:
         light = bpy.data.lights.new(name, "AREA")
+        assert isinstance(light, bpy.types.AreaLight)
         light.energy = energy * radius ** 2
         light.size = radius * 2
         obj = bpy.data.objects.new(name, light)
@@ -101,10 +81,9 @@ def _blender_main(args: dict[str, Any]) -> None:
     cam = bpy.data.objects.new("turntable_cam", cam_data)
     scene.collection.objects.link(cam)
 
-    res_x, res_y = args["resolution_x"], args["resolution_y"]
-    fov_h = cam_data.angle
-    fov_v = 2 * math.atan(math.tan(fov_h / 2) * res_y / res_x)
-    distance = radius / math.sin(min(fov_h, fov_v) / 2) * 1.1
+    # Fix the vertical FOV, framing then holds for any landscape or square resolution set at render time
+    cam_data.sensor_fit = "VERTICAL"
+    distance = radius / math.sin(cam_data.angle_y / 2) * 1.1
     elevation = math.radians(15)
     cam.parent = pivot
     cam.location = (0, -distance * math.cos(elevation), distance * math.sin(elevation))
@@ -122,9 +101,6 @@ def _blender_main(args: dict[str, Any]) -> None:
     scene.frame_start = 1
     scene.frame_end = frames
     scene.render.fps = 24
-    scene.render.resolution_x = res_x
-    scene.render.resolution_y = res_y
-    scene.render.resolution_percentage = 100
 
     bpy.ops.wm.save_as_mainfile(filepath=args["blend_file"])
 
@@ -134,45 +110,50 @@ class BlenderCreateTurntableNode(INode):
     # UI metadata
     category = "Blender"
     label = "Blender Create Turntable"
-    description = "Imports an asset and builds a 360 degree turntable scene, saved as .blend"
+    description = "Builds a 360 degree turntable around the meshes of a .blend scene"
+    icon = "https://api.iconify.design/mdi/rotate-360.svg?color=%23E87D0D"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        InputPlug("asset_file", self, value="")
+        InputPlug("blend_file", self, value="")
         InputPlug("output_dir", self, value="")
         InputPlug("frames", self, value=120)
-        InputPlug("resolution_x", self, value=1920)
-        InputPlug("resolution_y", self, value=1080)
         InputPlug("blender_executable", self, value="C:/Program Files/Blender Foundation/Blender 5.2/blender.exe")
         OutputPlug("blend_file", self)
         OutputPlug("frame_start", self)
         OutputPlug("frame_end", self)
 
-    def compute(self, asset_file: str, output_dir: str, frames: int, resolution_x: int, resolution_y: int, blender_executable: str) -> dict:
-        if not asset_file or not os.path.isfile(asset_file):
-            raise ValueError(f"Asset file not found: {asset_file}")
-        if not output_dir:
-            raise ValueError("output_dir is required")
+    def compute(self, blend_file: str, output_dir: str, frames: int, blender_executable: str) -> dict[str, Any]:
+        if not blend_file or not os.path.isfile(blend_file):
+            raise ValueError(f"Blend file not found: {blend_file}")
 
         frames = int(frames)
+        # Save next to the input .blend if no output dir is given, never overwrite the input
+        output_dir = output_dir or os.path.dirname(os.path.abspath(blend_file))
         os.makedirs(output_dir, exist_ok=True)
-        asset_name = os.path.splitext(os.path.basename(asset_file))[0]
-        blend_file = os.path.join(output_dir, f"{asset_name}_turntable.blend")
+        name = os.path.splitext(os.path.basename(blend_file))[0]
+        turntable_file = os.path.join(output_dir, f"{name}_turntable.blend")
 
         args = {
-            "asset_file": os.path.abspath(asset_file),
-            "blend_file": os.path.abspath(blend_file),
+            "blend_file": os.path.abspath(turntable_file),
             "frames": frames,
-            "resolution_x": int(resolution_x),
-            "resolution_y": int(resolution_y),
         }
-        _run([blender_executable, "-b", "--factory-startup", "--python-exit-code", "1",
-              "--python-expr", _blender_script(_blender_main), "--", json.dumps(args)])
+        log.info("Creating turntable for '%s' (%d frames) at %s", blend_file, frames, turntable_file)
+        start = time.monotonic()
 
-        if not os.path.isfile(blend_file):
-            raise RuntimeError(f"Turntable scene missing: {blend_file}")
+        # Script file instead of --python-expr, Blender echoes the whole expr on failure and buries the traceback
+        with tempfile.TemporaryDirectory() as tmp:
+            script = os.path.join(tmp, "blender_script.py")
+            with open(script, "w", encoding="utf-8") as f:
+                f.write(_blender_script(_blender_main))
+            _run([blender_executable, "-b", "--factory-startup", os.path.abspath(blend_file), "--python-exit-code", "1",
+                  "--python", script, "--", json.dumps(args)])
 
-        return {"blend_file": blend_file, "frame_start": 1, "frame_end": frames}
+        if not os.path.isfile(turntable_file):
+            raise RuntimeError(f"Turntable scene missing: {turntable_file}")
+
+        log.info("Turntable scene created in %.1fs: %s", time.monotonic() - start, turntable_file)
+        return {"blend_file": turntable_file, "frame_start": 1, "frame_end": frames}
 
 
 # Build a Blender script from a function, called with the JSON args passed after "--"

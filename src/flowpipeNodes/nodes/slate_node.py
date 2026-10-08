@@ -1,9 +1,13 @@
 import json
+import logging
 import os
 import subprocess
 from datetime import date
+from typing import Any
 from flowpipe import INode, InputPlug, OutputPlug
 from src.flowpipeNodes.registry import register_node
+
+log = logging.getLogger(__name__)
 
 @register_node("media.slate")
 class SlateNode(INode):
@@ -11,8 +15,9 @@ class SlateNode(INode):
     category = "Media"
     label = "Slate"
     description = "Prepends a slate with project, asset, artist, date and version to an MP4"
+    icon = "https://api.iconify.design/mdi/movie-open.svg?color=%23A78BFA"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         InputPlug("mp4", self, value="")
         InputPlug("project", self, value="")
@@ -24,7 +29,7 @@ class SlateNode(INode):
         InputPlug("font_file", self, value="C:/Windows/Fonts/arial.ttf")
         OutputPlug("slated_mp4", self)
 
-    def compute(self, mp4: str, project: str, asset_name: str, artist: str, version: int, slate_frames: int, ffmpeg_executable: str, font_file: str) -> dict:
+    def compute(self, mp4: str, project: str, asset_name: str, artist: str, version: int, slate_frames: int, ffmpeg_executable: str, font_file: str) -> dict[str, Any]:
         if not mp4 or not os.path.isfile(mp4):
             raise ValueError(f"Input video not found: {mp4}")
         if not font_file or not os.path.isfile(font_file):
@@ -35,6 +40,7 @@ class SlateNode(INode):
         slated_mp4 = f"{stem}_slate.mp4"
 
         width, height, fps = _probe_video(ffmpeg_executable, mp4)
+        log.info("Adding %d slate frames to '%s' (%dx%d @ %s fps)", int(slate_frames), mp4, width, height, fps)
 
         lines = [
             ("project", project),
@@ -62,6 +68,7 @@ class SlateNode(INode):
         if not os.path.isfile(slated_mp4):
             raise RuntimeError(f"Slated video missing: {slated_mp4}")
 
+        log.info("Slated video written: %s", slated_mp4)
         return {"slated_mp4": slated_mp4}
 
 

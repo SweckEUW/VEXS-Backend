@@ -22,9 +22,15 @@ class SerializedFlowpipeFunctionMeta(BaseModel):
     name: str
 
 class EditorNodeMetadata(BaseModel):
+    model_config = ConfigDict(extra="allow")  # editor-owned keys must survive a round-trip
     id: str | None = None  # Baklava node id, keeps flowpipe identifiers stable
     type: str | None = None  # Baklava node type key
     position: dict[Literal["x", "y"], float] | None = None
+    width: float | None = None  # node width in px, None = Baklava default
+    color: str | None = None  # CSS header color, set per node in the editor
+    category: str | None = None  # sidebar group, "Uncategorized" if missing
+    description: str | None = None  # shown in the sidebar and as tooltip
+    icon: str | None = None  # image URL, rendered as <img src>
 
 class SerializedFlowpipeNodeMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
