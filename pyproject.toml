@@ -11,3 +11,14 @@ dependencies = [
     "shotgun-api3>=3.10.3",
     "uvicorn>=0.52.4",
 ]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "fake-bpy-module-5-2>=20260730",
+]

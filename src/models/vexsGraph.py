@@ -1,6 +1,10 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import (BaseModel, Field)
 from src.models.flowpipe import SerializedFlowpipeGraph
+
+# Where a graph is executed, "deadline" is not implemented yet
+ExecutionMode = Literal["deadline", "local"]
 
 class VexsGraphBase(BaseModel):
     name: str = Field(..., description="Name of the VEXS graph")
@@ -19,3 +23,7 @@ class VexsGraphResponse(VexsGraphBase):
     id: int = Field(..., description="ShotGrid entity ID")
     created_at: datetime = Field(..., description="Timestamp of creation")
     updated_at: datetime = Field(..., description="Timestamp of last update")
+
+class VexsGraphExecutionResponse(BaseModel):
+    mode: ExecutionMode
+    status: Literal["success", "skipped"] = Field(..., description="local: evaluated, deadline: not implemented yet")

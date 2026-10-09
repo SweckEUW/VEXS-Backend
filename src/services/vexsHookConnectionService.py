@@ -1,7 +1,8 @@
-from typing import Literal, cast
+from typing import cast
 from src.core.config import settings
 from src.services import flowpipeService, shotgridService, vexsGraphService, vexsHookService
 from src.models.shotgrid import (ShotGridEntityRef, ShotGridFilter, ShotGridHookConnectionData, ShotGridHookConnectionEntity)
+from src.models.vexsGraph import ExecutionMode
 from src.models.vexsHook import VexsHook, VexsHookGraphExecutionResult
 from src.models.vexsHookConnection import (VexsHookConnectionCreate, VexsHookConnectionResponse)
 
@@ -77,7 +78,7 @@ def get_hook_connections_from_vexsHook(vexsHook_id: int) -> list[VexsHookConnect
     return [_map_to_pydantic(connection) for connection in sg_connections]
 
 # Execute all graphs connected to a vexs hook, a failing graph does not stop the others
-def execute_graphs_from_vexsHook(vexsHook_id: int, mode: Literal["deadline", "local"] = "deadline") -> list[VexsHookGraphExecutionResult]:
+def execute_graphs_from_vexsHook(vexsHook_id: int, mode: ExecutionMode = "local") -> list[VexsHookGraphExecutionResult]:
     results: list[VexsHookGraphExecutionResult] = []
 
     for connection in get_hook_connections_from_vexsHook(vexsHook_id):

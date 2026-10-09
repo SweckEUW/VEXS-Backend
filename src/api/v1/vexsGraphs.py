@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from src.models.vexsGraph import VexsGraphCreate, VexsGraphResponse
+from src.models.vexsGraph import ExecutionMode, VexsGraphCreate, VexsGraphExecutionResponse, VexsGraphResponse, VexsGraphUpdate
 from src.services import flowpipeService, vexsGraphService
 
 router = APIRouter()
@@ -8,9 +8,7 @@ router = APIRouter()
 # Fetch all graphs
 @router.get("/", response_model=List[VexsGraphResponse])
 def list_graphs():
-    graphs = vexsGraphService.get_all_graphs()
-    if not graphs: return []
-    return graphs
+    return vexsGraphService.get_all_graphs() or []
 
 # Fetch single graph
 @router.get("/{graph_id}", response_model=VexsGraphResponse)
@@ -28,7 +26,7 @@ def create_graph(payload: VexsGraphCreate):
 
 # update graph
 @router.put("/{graph_id}", response_model=VexsGraphResponse)
-def update_graph(graph_id: int, payload: VexsGraphCreate):
+def update_graph(graph_id: int, payload: VexsGraphUpdate):
     updated_graph = vexsGraphService.update_graph(graph_id, payload)
     if not updated_graph: raise HTTPException(status_code=400, detail="Update failed")
     return updated_graph
@@ -40,14 +38,14 @@ def delete_graph(graph_id: int):
     if not success: raise HTTPException(status_code=400, detail="Deletion failed")
     return {"message": "Graph deleted successfully"}
 
-# Get Graph JSON from Shotgrid and execute it on server (TODO: On Deadline farm)
-@router.post("/{graph_id}/execute")
-def execute_graph(graph_id: int):
+# Get Graph JSON from Shotgrid and execute it on the server
+@router.post("/{graph_id}/execute", response_model=VexsGraphExecutionResponse)
+def execute_graph(graph_id: int, mode: ExecutionMode = "local"):
     graph = vexsGraphService.get_graph(graph_id)
     if graph is None:
         raise HTTPException(status_code=404, detail="Graph not found")
-    if graph.flowpipe_graph is None:
-        raise HTTPException(status_code=400, detail="Graph has no flowpipe data")
 
-    flowpipeService.evaluate_graph(graph.flowpipe_graph)
-    return {"status": "success"}
+    try:
+        return flowpipeService.execute_graph(graph.flowpipe_graph, mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

@@ -35,9 +35,8 @@ class EditorNodeMetadata(BaseModel):
 class SerializedFlowpipeNodeMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
     interpreter: str | None = None  # e.g. "python", "maya", "houdini", "nuke"
-    batch_size: int | None = None
+    batch_size: int | None = None  # fallback chunk size if the node has no "batch_size" input
     label: str | None = None  # node title shown in the editor
-    category: str | None = None  # node category shown in the editor
     editor: EditorNodeMetadata | None = None
 
 class SerializedFlowpipeNode(BaseModel):

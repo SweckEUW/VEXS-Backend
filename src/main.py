@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -8,6 +9,9 @@ from fastapi.responses import JSONResponse
 
 from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes, vexsHooks
 from src.flowpipeNodes.registry import discover_nodes
+
+# Show INFO logs of locally evaluated nodes, uvicorn only configures its own loggers
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

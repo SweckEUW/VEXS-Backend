@@ -77,6 +77,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fake-bpy-module-5-2"
+version = "20260730"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/8c/95c6ead563863ff10551bb72e12305934e31f1dda152182aae125e80d2c9/fake_bpy_module_5_2-20260730.tar.gz", hash = "sha256:0db44b866f9bf6e018ec1802207481617529b6c9402930c92e9513205d6f4f34", size = 948626, upload-time = "2026-07-30T04:10:22.707Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/89/a27073478c3d0154e2b62013dc7d405e0686fc1b75f0a3499f875fee43ae/fake_bpy_module_5_2-20260730-py3-none-any.whl", hash = "sha256:bc8faaafabd277b347128a2fb5189f7b635427812a1832e69295c14589965fe8", size = 1095618, upload-time = "2026-07-30T04:10:21.169Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.141.1"
 source = { registry = "https://pypi.org/simple" }
@@ -345,6 +354,11 @@ dependencies = [
     { name = "uvicorn" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "fake-bpy-module-5-2" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
@@ -353,3 +367,6 @@ requires-dist = [
     { name = "shotgun-api3", specifier = ">=3.10.3" },
     { name = "uvicorn", specifier = ">=0.52.4" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "fake-bpy-module-5-2", specifier = ">=20260730" }]
