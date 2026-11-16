@@ -31,6 +31,7 @@ class EditorNodeMetadata(BaseModel):
     category: str | None = None  # sidebar group, "Uncategorized" if missing
     description: str | None = None  # shown in the sidebar and as tooltip
     icon: str | None = None  # image URL, rendered as <img src>
+    local_values: dict[str, Any] | None = None  # own value of each input a graph input overrides, keyed by input key
 
 class SerializedFlowpipeNodeMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -56,5 +57,32 @@ class SerializedFlowpipeSubgraph(BaseModel):
     name: str
     nodes: list[SerializedFlowpipeNode] = []
 
+# Graph inputs are owned by the web editor: flowpipe neither writes nor reads them
+GraphInputType = Literal["str", "int", "float", "bool"]
+
+class SerializedGraphInputPlugRef(BaseModel):
+    node: str  # identifier of the target node
+    plug: str  # name of its input plug
+
+class SerializedGraphInput(BaseModel):
+    type: GraphInputType
+    value: Any = None  # unset means no default, None is an explicit null default (check model_fields_set)
+    description: str | None = None
+    plugs: list[SerializedGraphInputPlugRef] = []
+
+class EditorGraphInputsMetadata(BaseModel):
+    position: dict[Literal["x", "y"], float] | None = None  # position of the Graph Inputs node
+
+class EditorGraphView(BaseModel):
+    panning: dict[Literal["x", "y"], float]
+    scaling: float
+
+class EditorGraphMetadata(BaseModel):
+    model_config = ConfigDict(extra="allow")  # editor-owned keys must survive a round-trip
+    graph_inputs: EditorGraphInputsMetadata | None = None
+    view: EditorGraphView | None = None  # canvas viewport, None keeps the current view on load
+
 class SerializedFlowpipeGraph(SerializedFlowpipeSubgraph):
     subgraphs: list[SerializedFlowpipeSubgraph] = []  # only on the top level
+    inputs: dict[str, SerializedGraphInput] = {}  # keyed by input name
+    editor: EditorGraphMetadata | None = None  # owned by the web editor

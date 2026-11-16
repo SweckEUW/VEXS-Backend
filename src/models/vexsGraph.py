@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from pydantic import (BaseModel, Field)
 from src.models.flowpipe import SerializedFlowpipeGraph
 
@@ -23,6 +23,9 @@ class VexsGraphResponse(VexsGraphBase):
     id: int = Field(..., description="ShotGrid entity ID")
     created_at: datetime = Field(..., description="Timestamp of creation")
     updated_at: datetime = Field(..., description="Timestamp of last update")
+
+class VexsGraphExecutionRequest(BaseModel):
+    inputs: dict[str, Any] = Field(default_factory=dict, description="Values for the graph inputs, keyed by input name")
 
 class VexsGraphExecutionResponse(BaseModel):
     mode: ExecutionMode

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from src.models.vexsGraph import ExecutionMode, VexsGraphCreate, VexsGraphExecutionResponse, VexsGraphResponse, VexsGraphUpdate
+from src.models.vexsGraph import ExecutionMode, VexsGraphCreate, VexsGraphExecutionRequest, VexsGraphExecutionResponse, VexsGraphResponse, VexsGraphUpdate
 from src.services import flowpipeService, vexsGraphService
 
 router = APIRouter()
@@ -40,12 +40,12 @@ def delete_graph(graph_id: int):
 
 # Get Graph JSON from Shotgrid and execute it on the server
 @router.post("/{graph_id}/execute", response_model=VexsGraphExecutionResponse)
-def execute_graph(graph_id: int, mode: ExecutionMode = "local"):
+def execute_graph(graph_id: int, mode: ExecutionMode = "local", payload: VexsGraphExecutionRequest | None = None):
     graph = vexsGraphService.get_graph(graph_id)
     if graph is None:
         raise HTTPException(status_code=404, detail="Graph not found")
 
     try:
-        return flowpipeService.execute_graph(graph.flowpipe_graph, mode)
+        return flowpipeService.execute_graph(graph.flowpipe_graph, mode, payload.inputs if payload else None)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

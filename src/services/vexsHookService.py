@@ -4,7 +4,7 @@ HOOKS: list[VexsHook] = [
     VexsHook(
         id=1,
         name="Asset Version Published",
-        description="Fires when an artist publishes a new version of an asset or shot.",
+        description="Fires when an artist publishes a new version of an asset.",
         icon="upload"
     ),
     VexsHook(

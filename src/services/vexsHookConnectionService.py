@@ -1,4 +1,5 @@
-from typing import cast
+import logging
+from typing import Any, cast
 from src.core.config import settings
 from src.services import flowpipeService, shotgridService, vexsGraphService, vexsHookService
 from src.models.shotgrid import (ShotGridEntityRef, ShotGridFilter, ShotGridHookConnectionData, ShotGridHookConnectionEntity)
@@ -8,6 +9,8 @@ from src.models.vexsHookConnection import (VexsHookConnectionCreate, VexsHookCon
 
 HOOK_CONNECTION_ENTITY = settings.shotgrid_hook_connection_entity
 GRAPH_ENTITY = settings.shotgrid_graph_entity
+
+log = logging.getLogger(__name__)
 
 class HookConnectionExistsError(Exception):
     """A connection between this hook and graph already exists."""
@@ -77,17 +80,21 @@ def get_hook_connections_from_vexsHook(vexsHook_id: int) -> list[VexsHookConnect
     sg_connections = cast(list[ShotGridHookConnectionEntity], connections)
     return [_map_to_pydantic(connection) for connection in sg_connections]
 
-# Execute all graphs connected to a vexs hook, a failing graph does not stop the others
-def execute_graphs_from_vexsHook(vexsHook_id: int, mode: ExecutionMode = "local") -> list[VexsHookGraphExecutionResult]:
+# Execute all graphs connected to a vexs hook, a failing graph does not stop the others.
+# All graphs get the same inputs, each one only takes the inputs it declares.
+def execute_graphs_from_vexsHook(vexsHook_id: int, mode: ExecutionMode = "local", inputs: dict[str, Any] | None = None) -> list[VexsHookGraphExecutionResult]:
     results: list[VexsHookGraphExecutionResult] = []
 
     for connection in get_hook_connections_from_vexsHook(vexsHook_id):
         graph = connection.vexs_graph
         result = VexsHookGraphExecutionResult(graph_id=graph.id, graph_name=graph.name)
+        graph_inputs = {name: value for name, value in (inputs or {}).items() if name in graph.flowpipe_graph.inputs}
 
         try:
-            result.execution = flowpipeService.execute_graph(graph.flowpipe_graph, mode)
+            result.execution = flowpipeService.execute_graph(graph.flowpipe_graph, mode, graph_inputs)
         except Exception as exc:
+            # The error only goes into the response, so log it to see it in the console as well
+            log.exception("Execution of graph '%s' (%d) from hook %d failed", graph.name, graph.id, vexsHook_id)
             result.error = str(exc)
 
         results.append(result)

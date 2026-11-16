@@ -4,14 +4,17 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes, vexsHooks
+from src.core.logConfig import setup_logging
 from src.flowpipeNodes.registry import discover_nodes
 
-# Show INFO logs of locally evaluated nodes, uvicorn only configures its own loggers
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+setup_logging()
+log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,5 +48,12 @@ if nodes_path.exists(): app.mount("/static/nodes", StaticFiles(directory=str(nod
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    print("Validation error:", exc.errors())
+    log.warning("%s %s -> 422: %s", request.method, request.url.path, exc.errors())
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+# Log the detail of every HTTP error, uvicorn's access log only shows the status code
+@app.exception_handler(StarletteHTTPException)
+async def log_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    level = logging.ERROR if exc.status_code >= 500 else logging.WARNING
+    log.log(level, "%s %s -> %d: %s", request.method, request.url.path, exc.status_code, exc.detail)
+    return await http_exception_handler(request, exc)
