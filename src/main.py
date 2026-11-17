@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.api.v1 import vexsGraphs, vexsHooksConnections, flowpipeNodes, vexsHooks
 from src.core.logConfig import setup_logging
 from src.flowpipeNodes.registry import discover_nodes
+from src.services import folderWatchService
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -20,7 +21,9 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Discover nodes on application startup
     discover_nodes()
+    folderWatchService.start()
     yield
+    folderWatchService.stop()
 
 # Pass lifespan explicitly to app
 app = FastAPI(title="VEXS API", version="1.0.0", lifespan=lifespan)

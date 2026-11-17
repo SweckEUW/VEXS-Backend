@@ -1,5 +1,7 @@
 from src.models.vexsHook import VexsHook
 
+FOLDER_WATCH_HOOK_ID = 2
+
 HOOKS: list[VexsHook] = [
     VexsHook(
         id=1,
@@ -8,22 +10,10 @@ HOOKS: list[VexsHook] = [
         icon="upload"
     ),
     VexsHook(
-        id=2,
-        name="Shot Created",
-        description="Fires when a new shot is created in ShotGrid",
-        icon="forward"
-    ),
-    VexsHook(
-        id=3,
-        name="Task Status Changed",
-        description="Fires when the status of a task changes, for example from “In Progress” to “Final",
-        icon="flag"
-    ),
-    VexsHook(
-        id=4,
-        name="Playblast Submitted",
-        description="Fires when an artist submits a playblast from Maya or Houdini",
-        icon="video"
+        id=FOLDER_WATCH_HOOK_ID,
+        name="File Dropped in Folder",
+        description="Fires when a new file is placed in the watch folder, passes graph inputs 'blend_file' (the file) and 'output_dir' (render/<file name> next to it).",
+        icon="folder"
     )
 ]
 
